@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Box S.A.</title>
+
+
+    <link rel="stylesheet" href ="../static/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Cabecera / Header -->
+    <header class="main-header">
+        <div class="logo">
+            <h1>Box S.A.</h1>
+        </div>
+        <nav class="nav-links">
+            <a href="/" class="active">Inicio</a>
+            <a href="#">Órdenes de Venta</a>
+            <a href="#">Clientes</a>
+            <a href="#">Stock / Productos</a>
+        </nav>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="dashboard-container">
+        <div class="dashboard-header">
+            <h2>Dashboard General</h2>
+            <!-- Botón verde de acción como solicitaste -->
+            <button class="btn-action">+ Nueva OV</button>
+        </div>
+
+        <!-- Cajas de métricas -->
+        <section class="kpi-cards">
+            <div class="card">
+                <h3>Recaudación Total</h3>
+                <p class="card-value">$ 1,250,000</p>
+            </div>
+            <div class="card">
+                <h3>Ganancias del Mes</h3>
+                <p class="card-value">$ 450,000</p>
+            </div>
+            <div class="card">
+                <h3>A Cobrar (Clientes)</h3>
+                <p class="card-value">$ 320,000</p>
+            </div>
+            <div class="card">
+                <h3>A Pagar (Proveedores)</h3>
+                <p class="card-value">$ 180,000</p>
+            </div>
+        </section>
+
+        <!-- Gráfico comparativo -->
+        <section class="chart-section">
+            <h3>Comparativa de Ganancias Mensuales</h3>
+            <div class="chart-container">
+                <canvas id="gananciasChart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <!-- Script para inicializar el gráfico de prueba -->
+    <script>
+        const ctx = document.getElementById('gananciasChart').getContext('2d');
+        const gananciasChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+                datasets: [{
+                    label: 'Ganancias ($)',
+                    data: [300000, 350000, 280000, 420000, 390000, 450000],
+                    backgroundColor: '#28a745', // Verde
+                    borderColor: '#1e7e34',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
