@@ -127,3 +127,13 @@ body {
     height: 400px;
     width: 100%;
 }
+
+/* --- Estilos para la vista de Nueva OV --- */
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+.form-group select, .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.table-items { width: 100%; border-collapse: collapse; margin-top: 20px; }
+.table-items th, .table-items td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+.table-items th { background-color: #f2f2f2; }
+
