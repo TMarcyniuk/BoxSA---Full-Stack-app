@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle OV #{{ ov.idOV }} - Box S.A.</title>
+    <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo"><h1>Box S.A.</h1></div>
+        <nav class="nav-links">
+            <a href="/">Inicio</a>
+            <a href="/ov">Órdenes de Venta</a>
+        </nav>
+        <div class="user-info">
+            Operador: <strong>{{ session['vendedor_nombre'] }}</strong>
+            (<a href="/logout" style="color: #ff6b6b; font-size: 12px; text-decoration: none;">Salir</a>)
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <div style="margin-bottom: 20px;">
+            <a href="/ov" style="text-decoration: none; color: #007bff; font-weight: bold;">&larr; Volver al listado</a>
+        </div>
+
+        <!-- CABECERA DE LA ORDEN -->
+        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Orden de Venta N° {{ ov.idOV }}</h2>
+                <span class="badge badge-ofp" style="font-size: 14px; padding: 6px 12px;">
+                    {{ ov.estado_tipo }} - {{ ov.estado_desc }}
+                </span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                <div><strong>Cliente:</strong> {{ ov.razonSocial }}</div>
+                <div><strong>Fecha Creación:</strong> {{ ov.fCreacion_str }}</div>
+                <div><strong>Entrega Estimada:</strong> {{ ov.fEntrega_str }}</div>
+                <div><strong>Total Orden:</strong> $ {{ "{:,.2f}".format(ov.total or 0) }}</div>
+            </div>
+        </div>
+
+        <!-- AVANCE Y DETALLE DE ÍTEMS -->
+        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+            <h3>Avance de Producción ({{ pct_avance_total }}%)</h3>
+            <div style="background-color: #e9ecef; border-radius: 4px; height: 12px; overflow: hidden; margin: 10px 0 20px 0;">
+                <div style="width: {{ pct_avance_total }}%; background-color: #28a745; height: 100%;"></div>
+            </div>
+
+            {% for item_info in detalles_items %}
+                <div style="border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+                    <h4 style="margin-top: 0; color: #2c3e50;">
+                        Item #{{ item_info.item.nItem }}: [{{ item_info.item.CodProd }}] {{ item_info.item.prod_desc }} 
+                        <span style="font-weight: normal; color: #6c757d;">(Cantidad: {{ item_info.item.cantidad|int }})</span>
+                    </h4>
+
+                    {% if item_info.pasos %}
+                        <table class="table-items" style="width: 100%; margin-top: 10px; font-size: 13px;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th>Seq</th>
+                                    <th>Centro de Trabajo</th>
+                                    <th>Proceso</th>
+                                    <th style="text-align: center;">Ordenado</th>
+                                    <th style="text-align: center;">Habilitado</th>
+                                    <th style="text-align: center;">Procesado</th>
+                                    <th style="text-align: center;">Pendiente</th>
+                                    <th style="text-align: center;">Avance</th>
+                                    <th style="text-align: center;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paso in item_info.pasos %}
+                                    <tr>
+                                        <td>{{ paso.seq }}</td>
+                                        <td style="font-weight: bold;">{{ paso.ct }}</td>
+                                        <td>{{ paso.proceso }}</td>
+                                        <td style="text-align: center;">{{ paso.ordenado }}</td>
+                                        <td style="text-align: center;">{{ paso.habilitado }}</td>
+                                        <td style="text-align: center; font-weight: bold; color: #28a745;">{{ paso.notificado }}</td>
+                                        <td style="text-align: center; color: #dc3545;">{{ paso.pendiente }}</td>
+                                        <td style="text-align: center;">{{ paso.pct_avance }}%</td>
+                                        <td style="text-align: center;">
+                                            {% if paso.estado == 'COMPLETADO' %}
+                                                <span style="background: #d1e7dd; color: #0f5132; padding: 2px 6px; border-radius: 4px; font-size: 11px;">COMPLETADO</span>
+                                            {% elif paso.estado == 'DISPONIBLE' %}
+                                                <span style="background: #cff4fc; color: #055160; padding: 2px 6px; border-radius: 4px; font-size: 11px;">DISPONIBLE</span>
+                                            {% else %}
+                                                <span style="background: #e2e3e5; color: #41464b; padding: 2px 6px; border-radius: 4px; font-size: 11px;">EN ESPERA</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p style="color: #6c757d; font-size: 13px; margin-bottom: 0;">No hay ruta de procesos asignada a este producto.</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- DOCUMENTOS ASOCIADOS -->
+        <div class="card" style="padding: 20px;">
+            <h3>Documentos Asociados</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
+                <!-- REMITO -->
+                <div style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px;">
+                    <strong style="color: #495057;">Remito:</strong>
+                    {% if remito %}
+                        <p style="margin: 5px 0 0 0;">N° {{ remito.numeroRemito }} ({{ remito.fecha_str or remito.fecha }})</p>
+                    {% else %}
+                        <p style="margin: 5px 0 0 0; color: #888;">Pendiente de emisión</p>
+                    {% endif %}
+                </div>
+
+                <!-- FACTURA -->
+                <div style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px;">
+                    <strong style="color: #495057;">Factura:</strong>
+                    {% if factura %}
+                        <p style="margin: 5px 0 0 0;">N° {{ factura.numeroFactura }} ({{ factura.fecha_str or factura.fecha }})</p>
+                        <small style="color: #28a745; font-weight: bold;">Total: $ {{ "{:,.2f}".format(factura.total or 0) }}</small>
+                    {% else %}
+                        <p style="margin: 5px 0 0 0; color: #888;">Pendiente de facturación</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

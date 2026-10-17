@@ -179,3 +179,84 @@ body {
 .table-items th, .table-items td { border: 1px solid #ddd; padding: 8px; text-align: left; }
 .table-items th { background-color: #f2f2f2; }
 
+/* Badges de Estado para Ordenes de Venta */
+.badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    display: inline-block;
+    letter-spacing: 0.5px;
+}
+
+.badge-ofp { background-color: #e3f2fd; color: #0d6efd; border: 1px solid #9ec5fe; }
+.badge-off { background-color: #f3e5f5; color: #6f42c1; border: 1px solid #d0bfff; }
+.badge-fac { background-color: #e8f5e9; color: #198754; border: 1px solid #a3cfbb; }
+.badge-rem { background-color: #fff3cd; color: #fd7e14; border: 1px solid #ffe69c; }
+.badge-cob { background-color: #e0f2f1; color: #20c997; border: 1px solid #99f6e4; }
+
+/* Botón cuadrado de detalle */
+.btn-detail-sq {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+.btn-detail-sq:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+/* Barras de progreso */
+.progress-bar-container {
+    width: 100%;
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    background-color: #0d6efd;
+    transition: width 0.3s ease;
+}
+
+/* Píldoras de estado por proceso */
+.status-pill {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+}
+.status-completed { background-color: #d1e7dd; color: #0f5132; }
+.status-available { background-color: #cff4fc; color: #055160; }
+.status-waiting { background-color: #e2e3e5; color: #41464b; }
+
+/* Botón de texto para Detalles */
+.btn-detail-text {
+    display: inline-block;
+    padding: 5px 12px;
+    background-color: #f8f9fa;
+    color: #0d6efd;
+    border: 1px solid #0d6efd;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-detail-text:hover {
+    background-color: #0d6efd;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25);
+}
+
