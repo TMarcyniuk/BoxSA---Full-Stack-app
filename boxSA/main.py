@@ -10,7 +10,7 @@ app.secret_key = 'clave_secreta_boxsa_123'
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'admin',
+    'password': 'Kiro2907',
     'database': 'boxsa'
 }
 
@@ -22,25 +22,35 @@ def get_db_connection():
         print(f"Error al conectar a MySQL: {e}")
         return None
 
-# --- RUTA DE "LOGIN" SIMULADO ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Permite seleccionar quién está usando el sistema."""
-    conn = get_db_connection()
     if request.method == 'POST':
-        # Guardamos el ID y nombre del vendedor en la sesión
         session['vendedor_id'] = request.form['vendedor_id']
         session['vendedor_nombre'] = request.form['vendedor_nombre']
-        return redirect(url_for('home'))
+        return redirect(url_for('listado_ov'))
         
-    vendedores = []
-    if conn:
-        cursor = conn.cursor(dictionary=True)
-        # Filtramos por usuarios activos del sector 3 (Ventas)
-        cursor.execute("SELECT idUsuario, nombre, apellido FROM usuarios WHERE Estado = 'ACT' AND idSector = 3")
+    conn = get_db_connection()
+    
+    # 1. Cortamos la ejecución y mostramos el error si no hay conexión
+    if not conn:
+        return "<h1>Error Crítico:</h1><p>Flask NO se está conectando a MySQL. Revisa tu 'db_config' (¿La contraseña es realmente 'admin' o en tu servidor local está vacía '').</p>"
+        
+    try:
+        cursor = conn.cursor(dictionary=True) 
+        # Traemos todo temporalmente sin WHERE para descartar problemas de estado
+        cursor.execute("SELECT * FROM usuarios")
         vendedores = cursor.fetchall()
         cursor.close()
         conn.close()
+        
+        # 2. Cortamos la ejecución y mostramos el error si la tabla está vacía
+        if len(vendedores) == 0:
+            return "<h1>Conexión Exitosa pero...</h1><p>La tabla 'usuarios' está completamente vacía. ¡Necesitas insertar al menos un usuario mediante phpMyAdmin o SQL para poder loguearte!</p>"
+            
+    except Exception as e:
+        # 3. Mostramos error si la tabla no se llama 'usuarios' o hay un problema SQL
+        return f"<h1>Error SQL:</h1><p>{str(e)}</p>"
+        
     return render_template('login.html', vendedores=vendedores)
 
 @app.route('/logout')
@@ -55,22 +65,27 @@ def home():
         return redirect(url_for('login'))
     return render_template('index.html')
 
-@app.route('/ov/nueva')
-def nueva_ov():
+@app.route('/ov')
+def listado_ov():
     if 'vendedor_id' not in session:
         return redirect(url_for('login'))
         
     conn = get_db_connection()
     clientes = []
+    ordenes = []
     if conn:
         cursor = conn.cursor(dictionary=True)
-        # Agregamos ORDER BY razonSocial ASC para orden alfabético
+        
+        # Ahora usamos la Vista limpia
+        cursor.execute("SELECT * FROM vista_ordenes_venta ORDER BY idOV DESC")
+        ordenes = cursor.fetchall()
+
         cursor.execute("SELECT idCliente, razonSocial FROM clientes WHERE estado = 'A' ORDER BY razonSocial ASC")
         clientes = cursor.fetchall()
         cursor.close()
         conn.close()
     
-    return render_template('nueva_ov.html', clientes=clientes)
+    return render_template('ovs.html', clientes=clientes, ordenes=ordenes)
 
 @app.route('/api/productos/<int:id_cliente>')
 def obtener_productos(id_cliente):
@@ -138,9 +153,9 @@ def guardar_ov():
         # --- Consigna 6: Grabar la OV (Cabecera y Detalle) ---
         # Cabecera (Estado 2 es "ON" en tu base de datos)
         query_cab = """
-            INSERT INTO ovcab (fCreacion, fEntrega, cant, subtotal, total, idEstado, idCliente, idVendedor)
-            VALUES (%s, %s, %s, %s, %s, 2, %s, %s)
-        """
+                    INSERT INTO ovcab (fCreacion, fEntrega, cant, subtotal, total, idEstado, idCliente, idVendedor)
+                    VALUES (%s, %s, %s, %s, %s, 2, %s, %s)
+                """
         cursor.execute(query_cab, (fecha_creacion, fecha_entrega, cant_total_items, subtotal, total, id_cliente, id_vendedor))
         id_ov_nueva = cursor.lastrowid # Obtenemos el ID generado
 

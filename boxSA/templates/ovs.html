@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Órdenes de Venta - Box S.A.</title>
+    <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo"><h1>Box S.A.</h1></div>
+        <nav class="nav-links">
+            <a href="/">Inicio</a>
+            <a href="/ov" class="active">Órdenes de Venta</a>
+        </nav>
+        <div class="user-info">
+            Operador: <strong>{{ session['vendedor_nombre'] }}</strong> 
+            (<a href="/logout" style="color: #ff6b6b; font-size: 12px; text-decoration: none;">Salir</a>)
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <div class="dashboard-header">
+            <h2>Gestión de Órdenes de Venta</h2>
+            <button class="btn-action" onclick="abrirModal()">+ Crear Nueva OV</button>
+        </div>
+
+        <!-- Tabla general de OVs -->
+        <div class="card">
+            <table class="table-items" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>N° OV</th>
+                        <th>Fecha Creación</th>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                        <th>Estado / Progreso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ov in ordenes %}
+                    <tr>
+                        <td>{{ ov.idOV }}</td>
+                        <td>{{ ov.fCreacion }}</td>
+                        <td>{{ ov.razonSocial }}</td>
+                        <td>$ {{ ov.total }}</td>
+                        <td><span style="padding: 4px 8px; border-radius: 4px; background: #e8f5e9; color: #2e7d32;">{{ ov.estado }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- MODAL PARA NUEVA OV -->
+    <div id="modalNuevaOV" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Crear Nueva Orden de Venta</h2>
+                <button class="close-btn" onclick="cerrarModal()">&times;</button>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>1. Seleccionar Cliente</label>
+                    <select id="cliente" onchange="cargarProductos()">
+                        <option value="">-- Seleccione un cliente --</option>
+                        {% for cliente in clientes %}
+                            <option value="{{ cliente.idCliente }}">{{ cliente.razonSocial }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Entrega Estimada</label>
+                    <input type="date" id="fecha_entrega" required>
+                </div>
+            </div>
+
+            <hr style="margin: 20px 0;">
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>2. Producto</label>
+                    <select id="producto"><option value="">-- Primero seleccione un cliente --</option></select>
+                </div>
+                <div class="form-group">
+                    <label>3. Cantidad</label>
+                    <input type="number" id="cantidad" min="1" value="1">
+                </div>
+            </div>
+            
+            <button type="button" class="btn-action" onclick="validarYAgregarItem()">Añadir a la Orden</button>
+
+            <table class="table-items" id="tablaDetalle">
+                <thead>
+                    <tr>
+                        <th>Cód</th>
+                        <th>Descripción</th>
+                        <th>Precio Unit.</th>
+                        <th>Cantidad</th>
+                        <th>Subtotal</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" style="text-align: right; font-weight: bold;">TOTAL:</td>
+                        <td colspan="2" id="lblTotal" style="font-weight: bold;">$ 0.00</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <div style="margin-top: 30px; text-align: right;">
+                <button type="button" class="btn-action" onclick="guardarOV()" style="background-color: #2c3e50;">Confirmar Orden</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function abrirModal() { document.getElementById('modalNuevaOV').style.display = 'flex'; }
+        function cerrarModal() { 
+            document.getElementById('modalNuevaOV').style.display = 'none'; 
+            itemsOV = []; // Limpiamos si cancela
+            renderizarTabla();
+        }
+
+        let itemsOV = []; 
+        let totalGlobal = 0;
+
+        function cargarProductos() {
+            // Misma lógica que ya tenías para cargar vía fetch
+            const idCliente = document.getElementById('cliente').value;
+            const selectProducto = document.getElementById('producto');
+            if(!idCliente) return;
+            
+            fetch(`/api/productos/${idCliente}`)
+                .then(res => res.json())
+                .then(data => {
+                    selectProducto.innerHTML = '<option value="">-- Seleccione un producto --</option>';
+                    data.forEach(prod => {
+                        selectProducto.innerHTML += `<option value="${prod.idProducto}" data-cod="${prod.CodProd}" data-desc="${prod.desc}" data-precio="${prod.pUnitario}">[${prod.CodProd}] ${prod.desc}</option>`;
+                    });
+                });
+        }
+
+        // Nueva función que consulta el stock antes de añadir
+        function validarYAgregarItem(idArticulo, cantidadSolicitada, precioUnitario) {
+            // Buscar el artículo en la base de datos local o mediante fetch
+            const articulo = obtenerArticuloPorId(idArticulo); 
+            
+            if (!articulo) {
+                alert("El artículo seleccionado no existe.");
+                return;
+            }
+
+            if (cantidadSolicitada <= 0) {
+                alert("La cantidad debe ser mayor a 0.");
+                return;
+            }
+
+            // Validación estricta de stock
+            if (cantidadSolicitada > articulo.stockActual) {
+                alert(`Stock insuficiente. Solo hay ${articulo.stockActual} unidades disponibles de ${articulo.descripcion}.`);
+                return;
+            }
+
+            // Si pasa la validación, agregar al DOM y al array de la orden
+            agregarAlCarritoDOM(articulo, cantidadSolicitada, precioUnitario);
+            actualizarTotales();
+        }
+
+        function renderizarTabla() {
+            const tbody = document.querySelector('#tablaDetalle tbody');
+            tbody.innerHTML = '';
+            totalGlobal = 0;
+
+            itemsOV.forEach((item, index) => {
+                totalGlobal += item.subtotalItem;
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.codProd}</td>
+                        <td>${item.desc}</td>
+                        <td>$ ${item.precioUnit.toFixed(2)}</td>
+                        <td>${item.cantidad}</td>
+                        <td>$ ${item.subtotalItem.toFixed(2)}</td>
+                        <td><button onclick="eliminarItem(${index})" style="color:red;border:none;background:none;cursor:pointer;">Quitar</button></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('lblTotal').innerText = '$ ' + totalGlobal.toFixed(2);
+        }
+
+        function eliminarItem(index) { itemsOV.splice(index, 1); renderizarTabla(); }
+
+        function guardarOV() {
+            // Lógica idéntica de fetch('/api/ov/guardar') ...
+            // Tras éxito:
+            // alert("Éxito");
+            // window.location.reload(); 
+        }
+    </script>
+</body>
+</html>

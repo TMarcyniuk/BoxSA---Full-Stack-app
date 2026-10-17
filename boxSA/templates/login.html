@@ -2,34 +2,37 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Ingreso - Box S.A.</title>
+    <title>Login - Box S.A.</title>
     <link rel="stylesheet" href="../static/css/styles.css">
 </head>
-<body style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-    <div class="card" style="width: 400px;">
-        <h2>Ingreso a Box S.A.</h2>
-        <p style="margin-bottom: 20px; color: #7f8c8d;">Seleccione su usuario vendedor:</p>
-        <form method="POST" action="/login">
-            <div class="form-group">
-                <select name="vendedor_id" id="vendedor_select" required style="width: 100%; padding: 10px; margin-bottom: 15px;">
-                    <option value="">-- Seleccione un vendedor --</option>
+<body style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f7f6;">
+    <div class="card" style="width: 400px; text-align: center; padding: 40px;">
+        <h2>Ingreso al Sistema</h2>
+        <form method="POST" action="/login" onsubmit="setNombreVendedor()">
+            <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+                <label for="vendedor_id">Seleccione su usuario:</label>
+                <select name="vendedor_id" id="vendedor_id" required style="width: 100%; padding: 10px;">
+                    <option value="">-- Seleccione un usuario --</option>
                     {% for v in vendedores %}
-                        <option value="{{ v.idUsuario }}">{{ v.nombre }} {{ v.apellido }}</option>
+                        <option value="{{ v['idUsuario'] }}" data-nombre="{{ v['nombre'] }} {{ v['apellido'] }}">
+                            {{ v['nombre'] }} {{ v['apellido'] }}
+                        </option>
                     {% endfor %}
                 </select>
-                <!-- Input oculto para capturar el nombre -->
-                <input type="hidden" name="vendedor_nombre" id="vendedor_nombre">
             </div>
+            <!-- Campo oculto para pasar el nombre al backend -->
+            <input type="hidden" name="vendedor_nombre" id="vendedor_nombre">
+            
             <button type="submit" class="btn-action" style="width: 100%;">Ingresar</button>
         </form>
     </div>
-    
+
     <script>
-        document.getElementById('vendedor_select').addEventListener('change', function() {
-            if(this.selectedIndex > 0) {
-                document.getElementById('vendedor_nombre').value = this.options[this.selectedIndex].text;
-            }
-        });
+        function setNombreVendedor() {
+            const select = document.getElementById('vendedor_id');
+            const opcionSeleccionada = select.options[select.selectedIndex];
+            document.getElementById('vendedor_nombre').value = opcionSeleccionada.getAttribute('data-nombre');
+        }
     </script>
 </body>
 </html>
