@@ -28,7 +28,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Orden de Venta N° {{ ov.idOV }}</h2>
                 <span class="badge badge-ofp" style="font-size: 14px; padding: 6px 12px;">
-                    {{ ov.estado_tipo }} - {{ ov.estado_desc }}
+                    {{ ov.estado_desc }}
                 </span>
             </div>
             
@@ -62,7 +62,7 @@
                                     <th>Centro de Trabajo</th>
                                     <th>Proceso</th>
                                     <th style="text-align: center;">Ordenado</th>
-                                    <th style="text-align: center;">Habilitado</th>
+
                                     <th style="text-align: center;">Procesado</th>
                                     <th style="text-align: center;">Pendiente</th>
                                     <th style="text-align: center;">Avance</th>
@@ -76,7 +76,6 @@
                                         <td style="font-weight: bold;">{{ paso.ct }}</td>
                                         <td>{{ paso.proceso }}</td>
                                         <td style="text-align: center;">{{ paso.ordenado }}</td>
-                                        <td style="text-align: center;">{{ paso.habilitado }}</td>
                                         <td style="text-align: center; font-weight: bold; color: #28a745;">{{ paso.notificado }}</td>
                                         <td style="text-align: center; color: #dc3545;">{{ paso.pendiente }}</td>
                                         <td style="text-align: center;">{{ paso.pct_avance }}%</td>

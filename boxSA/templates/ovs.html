@@ -11,6 +11,7 @@
         <nav class="nav-links">
             <a href="/">Inicio</a>
             <a href="/ov" class="active">Órdenes de Venta</a>
+            <a href="#">Productos</a>
         </nav>
         <div class="user-info">
             Operador: <strong>{{ session['vendedor_nombre'] }}</strong> 
@@ -59,11 +60,11 @@
 
                 <select id="filterEstado" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 180px;">
                     <option value="">Todos los estados</option>
-                    <option value="OFP">OFP - PENDIENTE</option>
-                    <option value="OFF">OFF - OF FINALIZADA</option>
-                    <option value="FAC">FAC - FACTURADA</option>
-                    <option value="REM">REM - REMITIDA</option>
-                    <option value="COB">COB - COBRADA</option>
+                    <option value="OFP">PENDIENTE</option>
+                    <option value="OFF">OF FINALIZADA</option>
+                    <option value="FAC">FACTURADA</option>
+                    <option value="REM">REMITIDA</option>
+                    <option value="COB">COBRADA</option>
                 </select>
 
                 <button class="btn-action" onclick="aplicarFiltros()" style="padding: 8px 16px; background-color: #6c757d;">Filtrar</button>
@@ -100,15 +101,15 @@
                         </td>
                         <td style="text-align: center;">
                             {% if ov.estado_tipo == 'OFP' %}
-                                <span class="badge badge-ofp">OFP PENDIENTE</span>
+                                <span class="badge badge-ofp">PENDIENTE</span>
                             {% elif ov.estado_tipo == 'OFF' %}
-                                <span class="badge badge-off">OFF OF FINALIZADA</span>
+                                <span class="badge badge-off">OF FINALIZADA</span>
                             {% elif ov.estado_tipo == 'FAC' %}
-                                <span class="badge badge-fac">FAC FACTURADA</span>
+                                <span class="badge badge-fac">FACTURADA</span>
                             {% elif ov.estado_tipo == 'REM' %}
-                                <span class="badge badge-rem">REM REMITIDA</span>
+                                <span class="badge badge-rem">REMITIDA</span>
                             {% else %}
-                                <span class="badge badge-cob">COB COBRADA</span>
+                                <span class="badge badge-cob">COBRADA</span>
                             {% endif %}
                         </td>
                         <td style="text-align: center;">

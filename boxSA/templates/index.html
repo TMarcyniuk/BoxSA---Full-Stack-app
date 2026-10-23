@@ -19,8 +19,7 @@
         <nav class="nav-links">
             <a href="/" class="active">Inicio</a>
             <a href="/ov">Órdenes de Venta</a>
-            <a href="#">Clientes</a>
-            <a href="#">Stock / Productos</a>
+            <a href="#">Productos</a>
         </nav>
         <div class="user-info">
             Operador: <strong>{{ session['vendedor_nombre'] }}</strong>
@@ -64,17 +63,17 @@
         </section>
     </main>
 
-    <!-- Script para inicializar el gráfico de prueba -->
     <script>
         const ctx = document.getElementById('gananciasChart').getContext('2d');
         const gananciasChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+                // Usamos tojson para inyectar la lista de Python como array de JS
+                labels: {{ chart_labels | tojson }},
                 datasets: [{
                     label: 'Ganancias ($)',
-                    data: [300000, 350000, 280000, 420000, 390000, 450000],
-                    backgroundColor: '#28a745', // Verde
+                    data: {{ chart_data | tojson }},
+                    backgroundColor: '#28a745', 
                     borderColor: '#1e7e34',
                     borderWidth: 1
                 }]

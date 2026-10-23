@@ -10,7 +10,7 @@ app.secret_key = 'clave_secreta_boxsa_123'
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'admin',
+    'password': 'Kiro2907',
     'database': 'boxsa'
 }
 
@@ -59,28 +59,43 @@ def home():
         return redirect(url_for('login'))
         
     conn = get_db_connection()
-    # Valores por defecto en caso de que la vista falle
-    metrics = {'recaudacion_total': 0, 'ganancias_mes': 0, 'a_cobrar': 0, 'a_pagar': 180000} 
+    metrics = {'recaudacion_total': 0, 'ganancias_mes': 0, 'a_cobrar': 0, 'a_pagar': 0}
+    chart_labels = []
+    chart_data = []
     
     if conn:
         try:
             cursor = conn.cursor(dictionary=True)
-            # Consultamos la vista general directamente
+            
+            # 1. KPIs Generales
             cursor.execute("SELECT * FROM vw_dashboard_kpis")
             row = cursor.fetchone()
             if row:
                 metrics['recaudacion_total'] = row['recaudacion_total']
                 metrics['ganancias_mes'] = row['ganancias_mes']
                 metrics['a_cobrar'] = row['a_cobrar']
+                metrics['a_pagar'] = row['a_pagar']
+            
+            # 2. Datos para el Gráfico (Últimos 6 meses)
+            cursor.execute("SELECT * FROM vw_ganancias_mensuales")
+            meses_bd = cursor.fetchall()
+            
+            nombres_meses = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
+            
+            # Revertimos la lista para que el gráfico empiece del mes más antiguo al más nuevo
+            for mes_data in reversed(meses_bd):
+                nombre_mes = f"{nombres_meses[mes_data['mes']]} {mes_data['anio']}"
+                chart_labels.append(nombre_mes)
+                chart_data.append(float(mes_data['total_ganancia']))
                 
             cursor.close()
             conn.close()
         except Exception as e:
             if conn:
                 conn.close()
-            print(f"Error cargando dashboard: {e}")
+            traceback.print_exc()
 
-    return render_template('index.html', metrics=metrics)
+    return render_template('index.html', metrics=metrics, chart_labels=chart_labels, chart_data=chart_data)
 
 @app.route('/ov')
 def listado_ov():
