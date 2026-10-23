@@ -194,24 +194,49 @@ def listado_ov():
                 ov['bloqueo_edicion'] = _motivo_bloqueo_edicion_ov(cursor, ov['idOV'])
                 ov['editable'] = ov['bloqueo_edicion'] is None
                 
+                # Las facturas pueden vincularse por el detalle de la OV o por el remito.
+                # El estado de cobro se compara contra el total FACTURADO, no contra
+                # el total general de la OV, que puede ser distinto.
                 cursor.execute("""
-                    SELECT COALESCE(SUM(pagos.pagado), 0) AS pagado
+                    SELECT
+                        COALESCE(SUM(f.total), 0) AS total_facturado,
+                        COALESCE(SUM(COALESCE(pagos.pagado, 0)), 0) AS pagado
                     FROM (
                         SELECT DISTINCT fd.idFactura
                         FROM facturasdet fd
-                        JOIN ovdet d ON d.idOVDet = fd.idOVDet
-                        WHERE d.idOV = %s
+                        LEFT JOIN ovdet d ON d.idOVDet = fd.idOVDet
+                        LEFT JOIN remitoscab rc ON rc.idRemito = fd.idRemito
+                        WHERE d.idOV = %s OR rc.idOV = %s
                     ) facturas_ov
+                    JOIN facturacab f ON f.idFactura = facturas_ov.idFactura
                     LEFT JOIN (
                         SELECT idFactura, SUM(importeAplicado) AS pagado
                         FROM rpdeta
                         GROUP BY idFactura
                     ) pagos ON pagos.idFactura = facturas_ov.idFactura
-                """, (ov['idOV'],))
-                res_pago = cursor.fetchone()
-                pagado = float(res_pago['pagado']) if res_pago and res_pago['pagado'] else 0.0
-                
-                ov['pagado'] = (pagado >= float(ov['total'] or 0)) if ov['total'] else False
+                """, (ov['idOV'], ov['idOV']))
+                res_pago = cursor.fetchone() or {}
+                total_facturado = float(res_pago.get('total_facturado') or 0)
+                pagado = float(res_pago.get('pagado') or 0)
+                ov['total_facturado'] = total_facturado
+                ov['importe_pagado'] = pagado
+                ov['saldo_factura'] = max(0.0, round(total_facturado - pagado, 2))
+                ov['pagado'] = total_facturado > 0 and pagado + 0.005 >= total_facturado
+
+                # Evita mostrar un COBRADA obsoleto si queda saldo en la factura.
+                if ov['estado_tipo'] == 'COB' and not ov['pagado']:
+                    cursor.execute(
+                        "SELECT EXISTS(SELECT 1 FROM remitoscab WHERE idOV = %s) AS tiene_remito",
+                        (ov['idOV'],)
+                    )
+                    tiene_remito = bool((cursor.fetchone() or {}).get('tiene_remito'))
+                    if tiene_remito:
+                        ov['estado_tipo'] = 'REM'
+                        ov['estado_desc'] = 'REMITIDA'
+                    elif total_facturado > 0:
+                        ov['estado_tipo'] = 'FAC'
+                        ov['estado_desc'] = 'FACTURADA'
+
                 if not ov['pagado']:
                     kpis['sin_pagar'] += 1
 
