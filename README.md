@@ -1,123 +1,111 @@
-# Proyecto Flask - Sistema de Gestión de Órdenes de Venta (Boxsa)
+# BoxSA — Sistema de Gestión de Órdenes de Venta
 
-Este es un sistema web desarrollado en **Python** con el framework **Flask** y **MySQL** como sistema de gestión de base de datos. Permite la administración de órdenes de venta (OV), seguimiento de productos, control de stock e insumos, procesos productivos y métricas financieras.
+BoxSA es una aplicación web desarrollada en **Python** con **Flask** y **MySQL**. Permite gestionar órdenes de venta (OV), consultar productos y stock, controlar insumos y procesos productivos, y consultar información relacionada con facturación, remitos y cobros.
 
----
+## Requisitos previos
 
-## Requerimientos Previos
+Antes de ejecutar el proyecto, instalá:
 
-Antes de comenzar, asegúrate de tener instalado el siguiente software en tu equipo:
+- **Python 3**: https://www.python.org/downloads/ . En Windows, durante la instalación marcá la opción **Add Python to PATH**.
+- **Visual Studio Code** (opcional, recomendado para editar el proyecto): https://code.visualstudio.com/.
+- **MySQL Server**: https://dev.mysql.com/downloads/mysql/.
+- **MySQL Workbench** (recomendado para importar el script SQL): https://dev.mysql.com/downloads/workbench/.
 
-1. **Python**: Descargar e instalar desde [python.org](https://www.python.org/). Asegúrate de marcar la opción *"Add Python to PATH"* durante la instalación.
-2. **Visual Studio Code (VS Code)**: Descargar e instalar desde [code.visualstudio.com](https://code.visualstudio.com/).
-3. **MySQL Server & MySQL Workbench**:
-   - Descargar e instalar MySQL Server desde [mysql.com](https://dev.mysql.com/downloads/mysql/).
-   - Se recomienda usar **MySQL Workbench** o **DBeaver** para la administración gráfica de la base de datos.
+## Instalación y configuración
 
----
+### 1. Abrir el proyecto
 
-## Paso a Paso: Configuración y Ejecución
+Abrí en Visual Studio Code la carpeta del proyecto, es decir, la carpeta que contiene `main.py` y las carpetas de plantillas y archivos estáticos. Después, abrí una terminal desde **Terminal > New Terminal** (o **Terminal > Nueva terminal**).
 
-Sigue estos pasos detallados para poner en marcha el proyecto en tu entorno local.
+### 2. Crear y activar un entorno virtual
 
-### Paso 1: Abrir el proyecto en VS Code
-1. Abre **Visual Studio Code**.
-2. Ve a `Archivo` > `Abrir carpeta...` (o `File` > `Open Folder...`) y selecciona la carpeta del proyecto donde se encuentra `main.py`.
-3. Abre una nueva terminal integrándote en VS Code presionando `Ctrl + Shift + \`` o desde el menú superior en `Terminal` > `Nuevo Terminal`.
+Se recomienda usar un entorno virtual para mantener separadas las dependencias del proyecto.
 
----
+**Windows (PowerShell):**
 
-### Paso 2: Crear y activar un entorno virtual (Recomendado)
-
-Es una buena práctica aislar las dependencias del proyecto.
-
-- **En Windows:**
-  ```bash
-  python -m venv venv
-  .\venv\Scripts\activate
-  ```
-
-- **En macOS / Linux:**
-  ```bash
-  python3 -m venv venv
-  source venv/bin/activate
-  ```
-
-*(Verás que la terminal ahora muestra `(venv)` al inicio de la línea de comandos).*
-
----
-
-### Paso 3: Instalar las librerías necesarias
-
-Con la terminal abierta y el entorno activo, ejecuta el siguiente comando para instalar **Flask** y el conector de **MySQL**:
-
-```bash
-pip install flask mysql-connector-python
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 ```
 
----
+**macOS o Linux:**
 
-### Paso 4: Preparar e importar la Base de Datos
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-1. Abre **MySQL Workbench** (o tu cliente MySQL de preferencia) e inicia sesión con tu usuario `root`.
-2. Crea la base de datos ejecutando la siguiente consulta SQL:
-   ```sql
-   CREATE DATABASE IF NOT EXISTS boxsa;
-   USE boxsa;
-   ```
-3. Importa el archivo de volcado/script SQL (`.sql`) del proyecto que contiene las tablas, vistas y datos iniciales (usuarios, productos, etc.).
-   - En **MySQL Workbench**: Ve a `Server` > `Data Import` -> Selecciona el archivo `.sql` -> Selecciona la base de datos objetivo `boxsa` -> `Start Import`.
+Cuando el entorno esté activo, normalmente verás `(venv)` al comienzo de la línea de la terminal.
 
----
+### 3. Instalar las dependencias
 
-### Paso 5: Configurar las credenciales en `main.py`
+Con el entorno virtual activado, ejecutá:
 
-Abre el archivo `main.py` en VS Code y ubica el diccionario de configuración `db_config` (alrededor de la línea 10):
+```bash
+python -m pip install Flask mysql-connector-python
+```
+
+### 4. Importar la base de datos
+
+Asegurate de que MySQL Server esté iniciado y abrí una conexión local desde MySQL Workbench.
+
+1. Abrí el archivo `BoxSAFinal.sql` con **File > Open SQL Script**.
+2. Verificá que estés conectado al servidor local correcto.
+3. Ejecutá el script con el botón del rayo (**Execute**). El archivo crea y selecciona la base `boxsa`, y carga las tablas y los datos incluidos en el volcado.
+
+**Importante:** el volcado contiene instrucciones que crean o reemplazan tablas. Si ya tenés una base `boxsa` con información que querés conservar, hacé una copia de seguridad antes de ejecutarlo.
+
+Si estás preparando la base con los datos de prueba corregidos para mostrar OVs en distintos estados, importá primero `BoxSAFinal.sql` y luego ejecutá `reparacion_boxsa_v2_con_estados.sql` sobre una copia de seguridad de esa base.
+
+### 5. Configurar la conexión a MySQL
+
+Abrí `main.py` y buscá el diccionario `db_config`. Configurá los datos de conexión según tu instalación local:
 
 ```python
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'TU_CONTRASEÑA_AQUÍ',  # <-- Reemplazala por la contraseña de tu usuario root de MySQL
+    'password': 'TU_CONTRASEÑA_DE_MYSQL',
     'database': 'boxsa'
 }
 ```
 
-Modifica el campo `'password'` colocando la contraseña que configuraste al instalar MySQL en tu equipo local.
+Reemplazá `TU_CONTRASEÑA_DE_MYSQL` por la contraseña del usuario de MySQL que elegiste. Si usás otro usuario, modificá también el campo `user`.
 
----
+No publiques contraseñas reales en el repositorio. Para un entorno compartido, conviene usar variables de entorno en lugar de guardar credenciales directamente en `main.py`.
 
-### Paso 6: Ejecutar la aplicación
+### 6. Ejecutar la aplicación
 
-Desde la terminal de VS Code, ejecuta el archivo principal:
+Desde la terminal, con el entorno virtual activado y ubicada en la carpeta que contiene `main.py`, ejecutá:
 
 ```bash
 python main.py
 ```
 
-Si todo está configurado correctamente, verás una salida similar a esta:
+Si la configuración es correcta, Flask mostrará un mensaje indicando que el servidor está disponible, normalmente en `http://127.0.0.1:5000`.
 
-```text
- * Serving Flask app 'main'
- * Debug mode: on
- * Running on http://127.0.0.1:5000
-```
+### 7. Abrir BoxSA
 
----
+Abrí el navegador e ingresá a:
 
-### Paso 7: Acceder al sistema
+http://127.0.0.1:5000
 
-1. Abre tu navegador web (Chrome, Edge, Firefox, etc.).
-2. Ingresa a la URL: `http://127.0.0.1:5000`
-3. Serás redirigido a la pantalla de **Login**, donde podrás seleccionar un usuario para iniciar sesión y empezar a utilizar el sistema.
+Se mostrará la pantalla de inicio de sesión. En la versión actual, se selecciona un usuario disponible en el sistema para ingresar.
 
----
+## Comandos rápidos
 
-## Resumen de Comandos Rápidos
+| Acción | Windows | macOS / Linux |
+|---|---|---|
+| Crear entorno virtual | `python -m venv venv` | `python3 -m venv venv` |
+| Activar entorno virtual | `venv\Scripts\Activate.ps1` | `source venv/bin/activate` |
+| Instalar dependencias | `python -m pip install Flask mysql-connector-python` | `python -m pip install Flask mysql-connector-python` |
+| Iniciar aplicación | `flask --app main run` |
 
-| Acción | Comando |
-| :--- | :--- |
-| Crear entorno virtual | `python -m venv venv` |
-| Activar entorno (Windows) | `.\venv\Scripts\activate` |
-| Instalar dependencias | `pip install flask mysql-connector-python` |
-| Iniciar servidor Flask | `python main.py` |
+## Solución de problemas
+
+- **Error de conexión a MySQL:** verificá que MySQL Server esté iniciado y que `host`, `user`, `password` y `database` coincidan con tu configuración.
+- **No se encuentra `main.py`:** comprobá que la terminal esté ubicada en la carpeta raíz del proyecto.
+- **No se encuentra una plantilla o un archivo CSS:** verificá que las carpetas del proyecto, como `templates` y `static`, mantengan sus nombres y ubicaciones originales.
+- **El puerto 5000 está ocupado:** cerrá la otra aplicación que lo esté utilizando antes de iniciar Flask nuevamente.
+
+> **Nota:** `main.py` inicia Flask con el modo de depuración activado. Esto es útil durante el desarrollo local, pero no debe utilizarse como configuración de producción.
