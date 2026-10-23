@@ -11,7 +11,7 @@
         <nav class="nav-links">
             <a href="/">Inicio</a>
             <a href="/ov" class="active">Órdenes de Venta</a>
-            <a href="#">Productos</a>
+            <a href="/productos">Productos</a>
         </nav>
         <div class="user-info">
             Operador: <strong>{{ session['vendedor_nombre'] }}</strong> 
@@ -60,8 +60,8 @@
 
                 <select id="filterEstado" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 180px;">
                     <option value="">Todos los estados</option>
-                    <option value="OFP">PENDIENTE</option>
-                    <option value="OFF">OF FINALIZADA</option>
+                    <option value="OVP">PENDIENTE</option>
+                    <option value="OVF">OF FINALIZADA</option>
                     <option value="FAC">FACTURADA</option>
                     <option value="REM">REMITIDA</option>
                     <option value="COB">COBRADA</option>
@@ -100,9 +100,9 @@
                             <small style="color: #6c757d; font-weight: bold; margin-left: 4px;">{{ ov.tipo_entrega }}</small>
                         </td>
                         <td style="text-align: center;">
-                            {% if ov.estado_tipo == 'OFP' %}
+                            {% if ov.estado_tipo == 'OVP' %}
                                 <span class="badge badge-ofp">PENDIENTE</span>
-                            {% elif ov.estado_tipo == 'OFF' %}
+                            {% elif ov.estado_tipo == 'OVF' %}
                                 <span class="badge badge-off">OF FINALIZADA</span>
                             {% elif ov.estado_tipo == 'FAC' %}
                                 <span class="badge badge-fac">FACTURADA</span>
@@ -177,7 +177,7 @@
                 <tbody></tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="4" style="text-align: right; font-weight: bold;">TOTAL ESTIMADO:</td>
+                        <td colspan="5" style="text-align: right; font-weight: bold;">TOTAL ESTIMADO:</td>
                         <td colspan="2" id="lblTotal" style="font-weight: bold; color: #2e7d32; font-size: 18px;">$ 0.00</td>
                     </tr>
                 </tfoot>
@@ -217,7 +217,7 @@
         function abrirModal() { document.getElementById('modalNuevaOV').style.display = 'flex'; }
         function cerrarModal() { 
             document.getElementById('modalNuevaOV').style.display = 'none'; 
-            itemsOV = []; 
+            itemsOV = [];
             renderizarTabla();
         }
 
@@ -242,9 +242,10 @@
             const cantidadInput = document.getElementById('cantidad');
             const cantidad = parseInt(cantidadInput.value);
             const idProducto = selectProducto.value;
+            const procesoEtapa3 = 7; // Etapa 3 fija: PIN - Pintura.
 
             if(!idProducto || isNaN(cantidad) || cantidad <= 0) {
-                alert("Por favor seleccione un producto y especifique una cantidad válida.");
+                alert("Seleccione un producto y una cantidad válida.");
                 return;
             }
 
@@ -264,6 +265,7 @@
                     desc: desc,
                     precioUnit: precioUnit,
                     cantidad: cantidad,
+                    procesoEtapa3: procesoEtapa3,
                     subtotalItem: precioUnit * cantidad
                 });
             }
@@ -288,6 +290,7 @@
                         <td>${item.desc}</td>
                         <td>$ ${item.precioUnit.toFixed(2)}</td>
                         <td>${item.cantidad}</td>
+                        <td>PIN - Pintura</td>
                         <td>$ ${item.subtotalItem.toFixed(2)}</td>
                         <td><button onclick="eliminarItem(${index})" style="color:red;border:none;background:none;cursor:pointer;font-weight:bold;">Quitar</button></td>
                     </tr>

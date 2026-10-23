@@ -134,15 +134,22 @@ def listado_ov():
             atrasadas_list = []
             
             for ov in ordenes:
-                if ov.get('fEntrega') and ov['fEntrega'] < fecha_actual and ov['estado_tipo'] in ('OFP', 'OFF'):
+                if ov.get('fEntrega') and ov['fEntrega'] < fecha_actual and ov['estado_tipo'] in ('OVP', 'OVF'):
                     atrasadas_list.append(ov)
                 
                 cursor.execute("""
-                    SELECT IFNULL(SUM(rd.importeAplicado), 0) as pagado
-                    FROM facturacab f
-                    JOIN facturasdet fd ON f.idFactura = fd.idFactura
-                    JOIN ovdet d ON fd.idProducto = d.idProducto AND d.idOV = %s
-                    LEFT JOIN rpdeta rd ON rd.idFactura = f.idFactura
+                    SELECT COALESCE(SUM(pagos.pagado), 0) AS pagado
+                    FROM (
+                        SELECT DISTINCT fd.idFactura
+                        FROM facturasdet fd
+                        JOIN ovdet d ON d.idOVDet = fd.idOVDet
+                        WHERE d.idOV = %s
+                    ) facturas_ov
+                    LEFT JOIN (
+                        SELECT idFactura, SUM(importeAplicado) AS pagado
+                        FROM rpdeta
+                        GROUP BY idFactura
+                    ) pagos ON pagos.idFactura = facturas_ov.idFactura
                 """, (ov['idOV'],))
                 res_pago = cursor.fetchone()
                 pagado = float(res_pago['pagado']) if res_pago and res_pago['pagado'] else 0.0
@@ -223,12 +230,15 @@ def ov_detalle(id_ov):
 
         for item in items:
             cursor.execute("""
-                SELECT rp.ordenProceso as seq, pr.codigoProceso as ct, pr.descripcion as proceso_nombre,
-                       pr.idProceso
+                SELECT rp.ordenProceso AS seq, pr.codigoProceso AS ct,
+                       pr.descripcion AS proceso_nombre, pr.idProceso
                 FROM recprocesos rp
                 JOIN procesos pr ON rp.idProceso = pr.idProceso
-                WHERE rp.idOV = %s AND rp.idProducto = %s
-                ORDER BY rp.ordenProceso ASC
+                JOIN productos p ON p.idProducto = rp.idProducto
+                WHERE rp.idOV = %s
+                  AND rp.idProducto = %s
+                  AND (pr.idProceso <> 3 OR p.CC IS NOT NULL)
+                ORDER BY rp.ordenProceso ASC, rp.idRecProceso ASC
             """, (id_ov, item['idProducto']))
             pasos = cursor.fetchall()
 
@@ -244,24 +254,29 @@ def ov_detalle(id_ov):
             cant_ordenada = float(item['cantidad'] or 0)
 
             for idx, paso in enumerate(pasos):
-                notificado = prod_map.get(paso['idProceso'], 0.0)
+                notificado = min(cant_ordenada, prod_map.get(paso['idProceso'], 0.0))
                 pendiente = max(0.0, cant_ordenada - notificado)
-                
+
                 if idx == 0:
                     ct_anterior = "— inicio —"
-                    habilitado = cant_ordenada
+                    habilitado = pendiente
                 else:
-                    prev_notif = pasos_procesados[-1]['notificado']
-                    ct_anterior = f"{pasos[idx-1]['ct']}: {int(prev_notif)}"
-                    habilitado = prev_notif
+                    prev_paso = pasos_procesados[-1]
+                    prev_notif = prev_paso['notificado']
+                    ct_anterior = f"{prev_paso['ct']}: {int(prev_notif)}"
+                    # Solo se habilita la cantidad ya procesada en el centro anterior
+                    # que todavía no fue procesada en este centro.
+                    habilitado = max(0.0, min(pendiente, prev_notif - notificado))
 
-                pct_avance = round((notificado / cant_ordenada * 100), 1) if cant_ordenada > 0 else 0
-                
+                pct_avance = min(100.0, round((notificado / cant_ordenada * 100), 1)) if cant_ordenada > 0 else 0
+
                 if notificado >= cant_ordenada:
                     estado_paso = "COMPLETADO"
                     total_pasos_completos += 1
-                elif notificado > 0 or (idx == 0 or pasos_procesados[-1]['notificado'] > 0):
+                elif habilitado > 0:
                     estado_paso = "DISPONIBLE"
+                elif notificado > 0:
+                    estado_paso = "EN PROCESO"
                 else:
                     estado_paso = "EN ESPERA"
 
@@ -294,10 +309,13 @@ def ov_detalle(id_ov):
             remito['fecha_str'] = remito['fecha'].strftime('%d/%m/%Y')
 
         cursor.execute("""
-            SELECT DISTINCT f.* 
-            FROM facturacab f 
-            JOIN facturasdet fd ON f.idFactura = fd.idFactura
-            JOIN ovdet d ON fd.idProducto = d.idProducto AND d.idOV = %s
+            SELECT DISTINCT f.*
+            FROM facturacab f
+            JOIN facturasdet fd ON fd.idFactura = f.idFactura
+            JOIN ovdet d ON d.idOVDet = fd.idOVDet
+            WHERE d.idOV = %s
+            ORDER BY f.fecha DESC, f.idFactura DESC
+            LIMIT 1
         """, (id_ov,))
         factura = cursor.fetchone()
         if factura and factura.get('fecha') and hasattr(factura['fecha'], 'strftime'):
@@ -414,87 +432,181 @@ def simular_insumos():
 @app.route('/api/ov/guardar', methods=['POST'])
 def guardar_ov():
     if 'vendedor_id' not in session:
-        return jsonify({'success': False, 'mensaje': 'Sesión expirada.'})
+        return jsonify({'success': False, 'mensaje': 'Sesión expirada.'}), 401
 
-    datos = request.json
-    id_cliente = datos['idCliente']
-    fecha_entrega = datos['fechaEntrega']
-    subtotal = datos['subtotal']
-    total = datos['total']
-    items = datos['items']
-    id_vendedor = int(session['vendedor_id'])
-    fecha_creacion = datetime.now().strftime('%Y-%m-%d')
-    cant_total_items = sum(int(item['cantidad']) for item in items)
+    datos = request.get_json(silent=True) or {}
+    try:
+        id_cliente = int(datos['idCliente'])
+        fecha_entrega = datos['fechaEntrega']
+        items = datos['items']
+        subtotal = float(datos['subtotal'])
+        total = float(datos['total'])
+    except (KeyError, TypeError, ValueError):
+        return jsonify({'success': False, 'mensaje': 'Faltan datos válidos para generar la OV.'}), 400
+
+    if not fecha_entrega or not isinstance(items, list) or not items:
+        return jsonify({'success': False, 'mensaje': 'Indique la fecha de entrega y al menos un producto.'}), 400
+
+    try:
+        productos_repetidos = set()
+        for item in items:
+            cantidad = int(item['cantidad'])
+            id_producto = int(item['idProducto'])
+            if cantidad <= 0 or id_producto in productos_repetidos:
+                raise ValueError
+            productos_repetidos.add(id_producto)
+    except (KeyError, TypeError, ValueError):
+        return jsonify({
+            'success': False,
+            'mensaje': 'Cada producto debe aparecer una sola vez y tener una cantidad positiva.'
+        }), 400
 
     conn = get_db_connection()
     if not conn:
-        return jsonify({'success': False, 'mensaje': 'Error de conexión a la BD.'})
+        return jsonify({'success': False, 'mensaje': 'Error de conexión a la BD.'}), 500
 
+    cursor = None
     try:
         cursor = conn.cursor(dictionary=True)
         conn.start_transaction()
+        id_vendedor = int(session['vendedor_id'])
+        fecha_creacion = datetime.now().date()
+        cant_total_items = sum(int(item['cantidad']) for item in items)
 
+        # Validar productos, ruta elegida y stock antes de registrar la orden.
+        productos_orden = {}
         for item in items:
-            id_prod = item['idProducto']
-            cant_pedida = int(item['cantidad'])
+            id_prod = int(item['idProducto'])
+            cantidad = int(item['cantidad'])
+
+            cursor.execute("""
+                SELECT idProducto, CC, CodProd
+                FROM productos
+                WHERE idProducto = %s AND idCli = %s AND estado = 'A'
+                FOR UPDATE
+            """, (id_prod, id_cliente))
+            producto = cursor.fetchone()
+            if not producto:
+                raise ValueError(f"El producto {id_prod} no pertenece al cliente seleccionado o no está activo.")
+            productos_orden[id_prod] = producto
 
             cursor.execute("SELECT idArticulo, cant FROM recmat WHERE idProducto = %s", (id_prod,))
-            receta = cursor.fetchall()
-
-            for ingrediente in receta:
+            receta_insumos = cursor.fetchall()
+            for ingrediente in receta_insumos:
                 id_art = ingrediente['idArticulo']
-                cant_total_necesaria = float(ingrediente['cant']) * cant_pedida
-
-                cursor.execute("SELECT codigoArticulo, stockActual FROM articulos WHERE idArticulo = %s", (id_art,))
+                cant_necesaria = float(ingrediente['cant'] or 0) * cantidad
+                cursor.execute("""
+                    SELECT codigoArticulo, stockActual
+                    FROM articulos
+                    WHERE idArticulo = %s
+                    FOR UPDATE
+                """, (id_art,))
                 articulo = cursor.fetchone()
+                if not articulo:
+                    raise ValueError(f"No existe el artículo de insumo {id_art} para {producto['CodProd']}.")
+                if float(articulo['stockActual'] or 0) < cant_necesaria:
+                    raise ValueError(f"Sin stock suficiente para el componente {articulo['codigoArticulo']}.")
+                cursor.execute("""
+                    UPDATE articulos
+                    SET stockActual = stockActual - %s, idUsuario = %s
+                    WHERE idArticulo = %s
+                """, (cant_necesaria, id_vendedor, id_art))
 
-                if float(articulo['stockActual'] or 0) < cant_total_necesaria:
-                    conn.rollback()
-                    return jsonify({'success': False, 'mensaje': f"Sin stock suficiente para el componente {articulo['codigoArticulo']}."})
-                
-                cursor.execute(
-                    "UPDATE articulos SET stockActual = stockActual - %s, idUsuario = %s WHERE idArticulo = %s",
-                    (cant_total_necesaria, id_vendedor, id_art)
-                )
-
-        query_cab = """
+        cursor.execute("""
             INSERT INTO ovcab (fCreacion, fEntrega, cant, subtotal, total, idEstado, idCliente, idVendedor)
             VALUES (%s, %s, %s, %s, %s, 1, %s, %s)
-        """
-        cursor.execute(query_cab, (fecha_creacion, fecha_entrega, cant_total_items, subtotal, total, id_cliente, id_vendedor))
+        """, (fecha_creacion, fecha_entrega, cant_total_items, subtotal, total, id_cliente, id_vendedor))
         id_ov_nueva = cursor.lastrowid
 
-        n_item = 1
-        for item in items:
-            query_det = """
+        procesos = {}
+        cursor.execute("""
+            SELECT idProceso, tiempoEstimadoBase
+            FROM procesos
+            WHERE idProceso IN (1, 2, 3, 4, 5, 6, 7, 8)
+        """)
+        for proc in cursor.fetchall():
+            procesos[int(proc['idProceso'])] = proc
+
+        for indice, item in enumerate(items, start=1):
+            id_prod = int(item['idProducto'])
+            cantidad = int(item['cantidad'])
+            precio_unit = float(item['precioUnit'])
+            subtotal_item = float(item.get('subtotalItem', precio_unit * cantidad))
+            producto = productos_orden[id_prod]
+
+            cursor.execute("""
                 INSERT INTO ovdet (nItem, cantidad, precioUnitario, subtotal, idOV, idProducto)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(query_det, (n_item, item['cantidad'], item['precioUnit'], item['subtotalItem'], id_ov_nueva, item['idProducto']))
-            
-            cursor.execute("SELECT idProceso, ordenProceso, tiempoEstimadoBase FROM procesos ORDER BY ordenProceso ASC")
-            procesos_base = cursor.fetchall()
-            for proc in procesos_base:
-                id_rec_proc = f"RP-{id_ov_nueva}-{proc['idProceso']}"
-                tiempo_est = str(proc['tiempoEstimadoBase']) if proc['tiempoEstimadoBase'] else '00:30:00'
+            """, (indice, cantidad, precio_unit, subtotal_item, id_ov_nueva, id_prod))
+
+            # Etapa 3 fijada por el sistema: PIN (Pintura), nunca TAP (Tapicería).
+            ruta = [(1, 1), (4, 2), (7, 3), (2, 4), (5, 5), (6, 6)]
+            if producto['CC'] is not None:
+                ruta.append((3, 7))
+
+            for id_proceso, orden_proceso in ruta:
+                if id_proceso not in procesos:
+                    raise ValueError(f"No existe el proceso {id_proceso} en el catálogo de procesos.")
+                tiempo = procesos[id_proceso]['tiempoEstimadoBase']
+                tiempo_est = str(tiempo) if tiempo else '00:30:00'
+                id_rec_proc = f"RP-{id_ov_nueva}-{id_proceso}"
                 cursor.execute("""
-                    INSERT IGNORE INTO recprocesos (idRecProceso, idOV, tiempoEstimado, ordenProceso, idProducto, idProceso)
+                    INSERT INTO recprocesos
+                        (idRecProceso, idOV, tiempoEstimado, ordenProceso, idProducto, idProceso)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                """, (id_rec_proc, id_ov_nueva, tiempo_est, proc['ordenProceso'], item['idProducto'], proc['idProceso']))
-                
-            n_item += 1
+                """, (id_rec_proc, id_ov_nueva, tiempo_est, orden_proceso, id_prod, id_proceso))
 
         conn.commit()
-        cursor.close()
-        conn.close()
-
         return jsonify({'success': True, 'mensaje': f'Orden de Venta N° {id_ov_nueva} generada correctamente.'})
 
     except Exception as e:
-        if conn:
-            conn.rollback()
+        conn.rollback()
+        mensaje = str(e) if isinstance(e, ValueError) else 'No se pudo guardar la OV por un error de base de datos.'
+        if not isinstance(e, ValueError):
+            traceback.print_exc()
+        return jsonify({'success': False, 'mensaje': mensaje}), 400 if isinstance(e, ValueError) else 500
+    finally:
+        if cursor:
+            cursor.close()
+        conn.close()
+
+@app.route('/productos')
+def productos():
+    if 'vendedor_id' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    lista_productos = []
+
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            query = """
+                SELECT 
+                    p.idProducto,
+                    p.CodProd,
+                    p.`desc`,
+                    p.costo,
+                    p.margen,
+                    p.pUnitario,
+                    p.estado,
+                    c.marca AS cliente_marca,
+                    tp.descripcion AS tipo_descripcion
+                FROM productos p
+                LEFT JOIN clientes c ON p.idCli = c.idCliente
+                LEFT JOIN tiprod tp ON p.idTipProd = tp.idTipProd
+                ORDER BY p.idProducto ASC;
+            """
+            cursor.execute(query)
+            lista_productos = cursor.fetchall()
+            cursor.close()
             conn.close()
-        return jsonify({'success': False, 'mensaje': str(e)})
+        except Exception as e:
+            if conn:
+                conn.close()
+            print(f"Error consultando productos: {e}")
+
+    return render_template('productos.html', productos=lista_productos) 
 
 if __name__ == '__main__':
     app.run(debug=True)
