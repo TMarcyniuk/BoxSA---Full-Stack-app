@@ -865,36 +865,31 @@ def productos():
 
     conn = get_db_connection()
     lista_productos = []
+    clientes = []
 
-    if conn:
-        try:
-            cursor = conn.cursor(dictionary=True)
-            query = """
-                SELECT 
-                    p.idProducto,
-                    p.CodProd,
-                    p.`desc`,
-                    p.costo,
-                    p.margen,
-                    p.pUnitario,
-                    p.estado,
-                    c.marca AS cliente_marca,
-                    tp.descripcion AS tipo_descripcion
-                FROM productos p
-                LEFT JOIN clientes c ON p.idCli = c.idCliente
-                LEFT JOIN tiprod tp ON p.idTipProd = tp.idTipProd
-                ORDER BY p.idProducto ASC;
-            """
-            cursor.execute(query)
-            lista_productos = cursor.fetchall()
-            cursor.close()
+    if not conn:
+        return render_template('productos.html', productos=lista_productos, clientes=clientes)
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM vista_productos ORDER BY idProducto ASC")
+        lista_productos = cursor.fetchall()
+
+        cursor.execute("""
+            SELECT idCliente, razonSocial
+            FROM clientes
+            ORDER BY razonSocial ASC
+        """)
+        clientes = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        if conn:
             conn.close()
-        except Exception as e:
-            if conn:
-                conn.close()
-            print(f"Error consultando productos: {e}")
+        print(f"Error consultando productos: {e}")
 
-    return render_template('productos.html', productos=lista_productos) 
+    return render_template('productos.html', productos=lista_productos, clientes=clientes)
 
 if __name__ == '__main__':
     app.run(debug=True)

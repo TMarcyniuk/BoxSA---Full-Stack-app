@@ -7,12 +7,8 @@
     <link rel="stylesheet" href="../static/css/styles.css">
 </head>
 <body>
-
-    <!-- Cabecera / Header -->
     <header class="main-header">
-        <div class="logo">
-            <h1>Box S.A.</h1>
-        </div>
+        <div class="logo"><h1>Box S.A.</h1></div>
         <nav class="nav-links">
             <a href="/">Inicio</a>
             <a href="/ov">Órdenes de Venta</a>
@@ -24,97 +20,170 @@
         </div>
     </header>
 
-    <!-- Contenido Principal -->
     <main class="dashboard-container">
         <div class="dashboard-header">
             <h2>Catálogo de Productos</h2>
         </div>
 
-        <!-- Filtro de Búsqueda -->
-        <section class="filter-section" style="margin-bottom: 20px;">
-            <div class="search-box" style="display: flex; gap: 10px; align-items: center;">
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    onkeyup="filterTable()" 
-                    placeholder="Buscar por código, descripción, cliente o tipo..." 
-                    style="padding: 10px; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;"
-                >
-            </div>
-        </section>
+        <!-- Filtros: mismo diseño general que la sección de Órdenes de Venta -->
+        <div class="card" style="padding: 15px; margin-bottom: 20px; text-align: left;">
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <input
+                    type="text"
+                    id="buscarProducto"
+                    placeholder="ID o código de producto"
+                    aria-label="Buscar por ID o código de producto"
+                    style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 220px;">
 
-        <!-- Tabla de Productos -->
-        <section class="table-section">
-            <div class="table-container">
-                <table class="data-table" id="productsTable">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Código</th>
-                            <th>Descripción</th>
-                            <th>Tipo</th>
-                            <th>Cliente / Marca</th>
-                            <th>Costo ($)</th>
-                            <th>Margen (%)</th>
-                            <th>Precio Unitario ($)</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for prod in productos %}
-                        <tr>
-                            <td>{{ prod.idProducto }}</td>
-                            <td><strong>{{ prod.CodProd }}</strong></td>
-                            <td>{{ prod.desc }}</td>
-                            <td>{{ prod.tipo_descripcion or '-' }}</td>
-                            <td>{{ prod.cliente_marca or '-' }}</td>
-                            <td>$ {{ "{:,.2f}".format(prod.costo or 0) }}</td>
-                            <td>{{ "{:,.1f}".format(prod.margen or 0) }} %</td>
-                            <td><strong>$ {{ "{:,.2f}".format(prod.pUnitario or 0) }}</strong></td>
-                            <td>
-                                {% if prod.estado == 'A' %}
-                                    <span class="status-badge status-active" style="background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Activo</span>
-                                {% else %}
-                                    <span class="status-badge status-inactive" style="background-color: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Inactivo</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="9" style="text-align: center; padding: 20px;">No hay productos registrados.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <select id="filtroCliente" aria-label="Filtrar por cliente"
+                        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 220px;">
+                    <option value="">Todos los clientes</option>
+                    {% for cliente in clientes %}
+                        <option value="{{ cliente.idCliente }}">{{ cliente.razonSocial }}</option>
+                    {% endfor %}
+                </select>
+
+                <select id="ordenProductos" aria-label="Ordenar productos"
+                        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; min-width: 230px;">
+                    <option value="id_asc">Ordenar por ID (ascendente)</option>
+                    <option value="costo_desc">Costo: mayor a menor</option>
+                    <option value="costo_asc">Costo: menor a mayor</option>
+                    <option value="fecha_asc">Fecha de alta: más antigua</option>
+                    <option value="fecha_desc">Fecha de alta: más reciente</option>
+                </select>
+
+
+                <button type="button" onclick="limpiarFiltrosProductos()"
+                        style="border: none; background: none; color: #007bff; cursor: pointer; font-size: 14px;">Limpiar</button>
             </div>
-        </section>
+        </div>
+
+        <!-- Listado de productos -->
+        <div class="card" style="padding: 0; overflow-x: auto; text-align: left;">
+            <table class="table-items" id="tablaProductos" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f8f9fa;">
+                        <th>ID</th>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Tipo</th>
+                        <th>Cliente / Marca</th>
+                        <th style="text-align: right;">Costo</th>
+                        <th style="text-align: right;">Margen</th>
+                        <th style="text-align: right;">Precio unitario</th>
+                        <th>Fecha de alta</th>
+                        <th style="text-align: center;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prod in productos %}
+                    <tr class="producto-row"
+                        data-id="{{ prod.idProducto }}"
+                        data-codigo="{{ prod.CodProd|lower }}"
+                        data-descripcion="{{ (prod.desc or '')|lower }}"
+                        data-cliente="{{ prod.idCli }}"
+                        data-costo="{{ prod.costo if prod.costo is not none else 0 }}"
+                        data-fecha="{{ prod.fechaAlta.isoformat() if prod.fechaAlta else '' }}">
+                        <td style="font-weight: bold;">{{ prod.idProducto }}</td>
+                        <td><strong>{{ prod.CodProd }}</strong></td>
+                        <td>{{ prod.desc or '-' }}</td>
+                        <td>{{ prod.tipo_descripcion or '-' }}</td>
+                        <td>
+                            {{ prod.cliente_razonSocial or '-' }}
+                            {% if prod.cliente_marca %}
+                                <small style="display: block; color: #6c757d;">{{ prod.cliente_marca }}</small>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right; white-space: nowrap;">$ {{ "{:,.2f}".format(prod.costo or 0) }}</td>
+                        <td style="text-align: right; white-space: nowrap;">{{ "{:,.1f}".format(prod.margen or 0) }} %</td>
+                        <td style="text-align: right; white-space: nowrap;"><strong>$ {{ "{:,.2f}".format(prod.pUnitario or 0) }}</strong></td>
+                        <td style="white-space: nowrap;">{{ prod.fechaAlta.strftime('%d/%m/%Y') if prod.fechaAlta else '-' }}</td>
+                        <td style="text-align: center;">
+                            {% if prod.estado == 'A' %}
+                                <span class="badge badge-fac">Activo</span>
+                            {% else %}
+                                <span class="badge badge-rem">Inactivo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr id="sinProductos">
+                        <td colspan="10" style="text-align: center; padding: 20px;">No hay productos registrados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </main>
 
-    <!-- Script para Búsqueda y Filtrado en Tiempo Real -->
     <script>
-        function filterTable() {
-            const input = document.getElementById("searchInput");
-            const filter = input.value.toUpperCase();
-            const table = document.getElementById("productsTable");
-            const tr = table.getElementsByTagName("tr");
+        const cuerpoProductos = document.querySelector('#tablaProductos tbody');
+        const filasProductos = Array.from(cuerpoProductos.querySelectorAll('tr.producto-row'));
 
-            for (let i = 1; i < tr.length; i++) {
-                let rowVisible = false;
-                const tds = tr[i].getElementsByTagName("td");
-                
-                // Busca coincidencia en Código, Descripción, Tipo o Cliente
-                for (let j = 1; j <= 4; j++) {
-                    if (tds[j]) {
-                        const txtValue = tds[j].textContent || tds[j].innerText;
-                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                            rowVisible = true;
-                            break;
-                        }
-                    }
+        function aplicarFiltrosProductos() {
+            const busqueda = document.getElementById('buscarProducto').value.trim().toLocaleLowerCase();
+            const cliente = document.getElementById('filtroCliente').value;
+            const orden = document.getElementById('ordenProductos').value;
+
+            // Ordenar las filas por la opción elegida antes de mostrarlas.
+            filasProductos.sort((a, b) => {
+                const costoA = Number(a.dataset.costo || 0);
+                const costoB = Number(b.dataset.costo || 0);
+                const fechaA = a.dataset.fecha || '';
+                const fechaB = b.dataset.fecha || '';
+
+                switch (orden) {
+                    case 'costo_desc':
+                        return costoB - costoA || Number(a.dataset.id) - Number(b.dataset.id);
+                    case 'costo_asc':
+                        return costoA - costoB || Number(a.dataset.id) - Number(b.dataset.id);
+                    case 'fecha_asc':
+                        if (!fechaA) return fechaB ? 1 : Number(a.dataset.id) - Number(b.dataset.id);
+                        if (!fechaB) return -1;
+                        return fechaA.localeCompare(fechaB) || Number(a.dataset.id) - Number(b.dataset.id);
+                    case 'fecha_desc':
+                        if (!fechaA) return fechaB ? 1 : Number(a.dataset.id) - Number(b.dataset.id);
+                        if (!fechaB) return -1;
+                        return fechaB.localeCompare(fechaA) || Number(a.dataset.id) - Number(b.dataset.id);
+                    default:
+                        return Number(a.dataset.id) - Number(b.dataset.id);
                 }
-                tr[i].style.display = rowVisible ? "" : "none";
+            });
+
+            // Reinsertar las filas ordenadas y aplicar los filtros.
+            const filaVaciaAnterior = document.getElementById('sinResultadosFiltro');
+            if (filaVaciaAnterior) filaVaciaAnterior.remove();
+
+            let visibles = 0;
+            filasProductos.forEach(fila => {
+                cuerpoProductos.appendChild(fila);
+                const textoBusqueda = `${fila.dataset.id} ${fila.dataset.codigo} ${fila.dataset.descripcion}`.toLocaleLowerCase();
+                const coincideTexto = !busqueda || textoBusqueda.includes(busqueda);
+                const coincideCliente = !cliente || fila.dataset.cliente === cliente;
+                const mostrar = coincideTexto && coincideCliente;
+                fila.style.display = mostrar ? '' : 'none';
+                if (mostrar) visibles++;
+            });
+
+            if (filasProductos.length > 0 && visibles === 0) {
+                const fila = document.createElement('tr');
+                fila.id = 'sinResultadosFiltro';
+                fila.innerHTML = '<td colspan="10" style="text-align: center; padding: 20px;">No hay productos que coincidan con los filtros.</td>';
+                cuerpoProductos.appendChild(fila);
             }
         }
+
+        function limpiarFiltrosProductos() {
+            document.getElementById('buscarProducto').value = '';
+            document.getElementById('filtroCliente').value = '';
+            document.getElementById('ordenProductos').value = 'id_asc';
+            aplicarFiltrosProductos();
+        }
+
+        document.getElementById('buscarProducto').addEventListener('input', aplicarFiltrosProductos);
+        document.getElementById('filtroCliente').addEventListener('change', aplicarFiltrosProductos);
+        document.getElementById('ordenProductos').addEventListener('change', aplicarFiltrosProductos);
+        aplicarFiltrosProductos();
     </script>
 </body>
 </html>

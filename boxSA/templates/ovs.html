@@ -67,7 +67,6 @@
                     <option value="COB">COBRADA</option>
                 </select>
 
-                <button class="btn-action" onclick="aplicarFiltros()" style="padding: 8px 16px; background-color: #6c757d;">Filtrar</button>
                 <button type="button" onclick="limpiarFiltros()" style="border: none; background: none; color: #007bff; cursor: pointer; font-size: 14px;">Limpiar</button>
             </div>
         </div>
@@ -529,6 +528,12 @@
             document.getElementById('filterEstado').value = '';
             aplicarFiltros();
         }
+
+        document.getElementById('filterOV').addEventListener('input', aplicarFiltros);
+        document.getElementById('filterCliente').addEventListener('change', aplicarFiltros);
+        document.getElementById('filterEstado').addEventListener('change', aplicarFiltros);
+
+aplicarFiltros();
     </script>
 </body>
 </html>
