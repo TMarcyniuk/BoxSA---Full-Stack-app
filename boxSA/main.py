@@ -10,7 +10,7 @@ app.secret_key = 'clave_secreta_boxsa_123'
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'Kiro2907',
+    'password': 'admin',
     'database': 'boxsa'
 }
 
@@ -57,7 +57,7 @@ def _obtener_procesos_catalogo(cursor):
 
 
 def _insertar_ruta_ov(cursor, id_ov, id_producto, numero_item, producto, procesos):
-    # Ruta productiva fija para nuevas/actualizadas OVs.
+    
     ruta = [(1, 1), (4, 2), (7, 3), (2, 4), (5, 5), (6, 6)]
     if producto.get('CC') is not None:
         ruta.append((3, 7))
@@ -68,7 +68,7 @@ def _insertar_ruta_ov(cursor, id_ov, id_producto, numero_item, producto, proceso
             raise ValueError(f'No existe el proceso {id_proceso} en el catálogo de procesos.')
         tiempo = proceso['tiempoEstimadoBase']
         tiempo_estimado = str(tiempo) if tiempo else '00:30:00'
-        # El número de ítem evita colisiones al incluir más de un producto por OV.
+    
         id_rec_proceso = f'{id_ov}-{numero_item}-{id_proceso}'
         cursor.execute("""
             INSERT INTO recprocesos
@@ -121,7 +121,7 @@ def home():
         try:
             cursor = conn.cursor(dictionary=True)
             
-            # 1. KPIs Generales
+       
             cursor.execute("SELECT * FROM vw_dashboard_kpis")
             row = cursor.fetchone()
             if row:
@@ -130,13 +130,12 @@ def home():
                 metrics['a_cobrar'] = row['a_cobrar']
                 metrics['a_pagar'] = row['a_pagar']
             
-            # 2. Datos para el Gráfico (Últimos 6 meses)
+          
             cursor.execute("SELECT * FROM vw_ganancias_mensuales")
             meses_bd = cursor.fetchall()
             
             nombres_meses = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
             
-            # Revertimos la lista para que el gráfico empiece del mes más antiguo al más nuevo
             for mes_data in reversed(meses_bd):
                 nombre_mes = f"{nombres_meses[mes_data['mes']]} {mes_data['anio']}"
                 chart_labels.append(nombre_mes)
@@ -194,9 +193,7 @@ def listado_ov():
                 ov['bloqueo_edicion'] = _motivo_bloqueo_edicion_ov(cursor, ov['idOV'])
                 ov['editable'] = ov['bloqueo_edicion'] is None
                 
-                # Las facturas pueden vincularse por el detalle de la OV o por el remito.
-                # El estado de cobro se compara contra el total FACTURADO, no contra
-                # el total general de la OV, que puede ser distinto.
+        
                 cursor.execute("""
                     SELECT
                         COALESCE(SUM(f.total), 0) AS total_facturado,
@@ -223,7 +220,7 @@ def listado_ov():
                 ov['saldo_factura'] = max(0.0, round(total_facturado - pagado, 2))
                 ov['pagado'] = total_facturado > 0 and pagado + 0.005 >= total_facturado
 
-                # Evita mostrar un COBRADA obsoleto si queda saldo en la factura.
+            
                 if ov['estado_tipo'] == 'COB' and not ov['pagado']:
                     cursor.execute(
                         "SELECT EXISTS(SELECT 1 FROM remitoscab WHERE idOV = %s) AS tiene_remito",
@@ -270,7 +267,6 @@ def ov_detalle(id_ov):
     try:
         cursor = conn.cursor(dictionary=True)
         
-        # 1. Cabecera de la Orden
         cursor.execute("""
             SELECT o.*, c.razonSocial, c.marca, e.tipo as estado_tipo, e.descripcion as estado_desc
             FROM ovcab o
@@ -285,7 +281,7 @@ def ov_detalle(id_ov):
             conn.close()
             return "Orden de Venta no encontrada", 404
 
-        # Formatear fechas de la OV a string seguro
+     
         if ov.get('fCreacion') and hasattr(ov['fCreacion'], 'strftime'):
             ov['fCreacion_str'] = ov['fCreacion'].strftime('%d/%m/%Y')
         else:
@@ -296,7 +292,7 @@ def ov_detalle(id_ov):
         else:
             ov['fEntrega_str'] = str(ov.get('fEntrega') or '')
 
-        # 2. Ítems de la Orden
+     
         cursor.execute("""
             SELECT d.*, p.CodProd, p.desc as prod_desc
             FROM ovdet d
@@ -346,8 +342,7 @@ def ov_detalle(id_ov):
                     prev_paso = pasos_procesados[-1]
                     prev_notif = prev_paso['notificado']
                     ct_anterior = f"{prev_paso['ct']}: {int(prev_notif)}"
-                    # Solo se habilita la cantidad ya procesada en el centro anterior
-                    # que todavía no fue procesada en este centro.
+                
                     habilitado = max(0.0, min(pendiente, prev_notif - notificado))
 
                 pct_avance = min(100.0, round((notificado / cant_ordenada * 100), 1)) if cant_ordenada > 0 else 0
@@ -384,7 +379,7 @@ def ov_detalle(id_ov):
 
         pct_avance_total = round((total_pasos_completos / total_pasos_totales * 100), 1) if total_pasos_totales > 0 else 0
 
-        # 3. Documentos vinculados (Remito, Factura, Recibos)
+       
         cursor.execute("SELECT * FROM remitoscab WHERE idOV = %s", (id_ov,))
         remito = cursor.fetchone()
         if remito and remito.get('fecha') and hasattr(remito['fecha'], 'strftime'):
@@ -495,7 +490,6 @@ def simular_insumos():
                     }
                 insumos_acumulados[id_art]['qtyNecesaria'] += float(art['cant_necesaria'] or 0)
 
-        # Al editar, se considera disponible el stock que ya había reservado esta OV.
         if id_ov_edicion is not None:
             cursor.execute("""
                 SELECT r.idArticulo, SUM(r.cant * d.cantidad) AS reservado
@@ -574,7 +568,7 @@ def guardar_ov():
         fecha_creacion = datetime.now().date()
         cant_total_items = sum(int(item['cantidad']) for item in items)
 
-        # Validar productos, ruta elegida y stock antes de registrar la orden.
+     
         productos_orden = {}
         for item in items:
             id_prod = int(item['idProducto'])
@@ -757,7 +751,6 @@ def actualizar_ov(id_ov):
         cursor.execute("SELECT idProducto, cantidad FROM ovdet WHERE idOV = %s FOR UPDATE", (id_ov,))
         items_anteriores = cursor.fetchall()
 
-        # Devuelve al inventario los insumos que se habían reservado para esta versión.
         for anterior in items_anteriores:
             cursor.execute("SELECT idArticulo, cant FROM recmat WHERE idProducto = %s", (anterior['idProducto'],))
             for insumo in cursor.fetchall():

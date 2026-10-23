@@ -11,7 +11,6 @@
 </head>
 <body>
 
-    <!-- Cabecera / Header -->
     <header class="main-header">
         <div class="logo">
             <h1>Box S.A.</h1>
@@ -27,14 +26,13 @@
         </div>
     </header>
 
-    <!-- Contenido Principal -->
     <main class="dashboard-container">
         <div class="dashboard-header">
             <h2>Dashboard General</h2>
             <h2>Bienvenido/a al panel, {{ session['vendedor_nombre'] }}</h2>
         </div>
 
-        <!-- Cajas de métricas -->
+    
         <section class="kpi-cards">
             <div class="card">
                 <h3>Recaudación Total</h3>
@@ -54,7 +52,8 @@
             </div>
         </section>
 
-        <!-- Gráfico comparativo -->
+       
+        
         <section class="chart-section">
             <h3>Comparativa de Ganancias Mensuales</h3>
             <div class="chart-container">

@@ -21,7 +21,7 @@
 
     <main class="dashboard-container">
         
-        <!-- OVERVIEW / TARJETAS KPIS -->
+    
         <div class="kpi-cards">
             <div class="card">
                 <h3>Órdenes Activas</h3>
@@ -46,7 +46,7 @@
             <button class="btn-action" onclick="abrirModal()">+ Nueva OV</button>
         </div>
 
-        <!-- FILTROS Y BARRA DE BÚSQUEDA -->
+       
         <div class="card" style="padding: 15px; margin-bottom: 20px;">
             <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                 <input type="text" id="filterOV" placeholder="N° OV" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 120px;">
@@ -71,7 +71,7 @@
             </div>
         </div>
 
-        <!-- TABLA DE ÓRDENES DE VENTA -->
+        
         <div class="card" style="padding: 0; overflow-x: auto;">
             <table class="table-items" id="tablaOV" style="width: 100%; border-collapse: collapse;">
                 <thead>
@@ -152,7 +152,7 @@
         </div>
     </main>
 
-    <!-- MODAL DE NUEVA OV -->
+  
     <div id="modalNuevaOV" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -191,7 +191,6 @@
             
             <button type="button" class="btn-action" onclick="validarYAgregarItem()">Añadir a la Orden</button>
 
-            <!-- TABLA DE DETALLE DE ÍTEMS AGREGADOS -->
             <h4 style="margin-top: 20px; color: #2c3e50;">Detalle de Productos en la Orden</h4>
             <table class="table-items" id="tablaDetalle">
                 <thead>
@@ -213,7 +212,7 @@
                 </tfoot>
             </table>
 
-            <!-- SECCIÓN DE INSUMOS REQUERIDOS (CHECK STOCK ACUMULADO) -->
+           
             <div style="margin-top: 25px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">
                 <h4 style="margin-bottom: 10px; color: #495057;">Insumos Requeridos y Verificación de Stock (Consolidado)</h4>
                 <table class="table-items" id="tablaInsumos" style="width: 100%; font-size: 13px; background: #fff;">
