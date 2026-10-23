@@ -23,7 +23,7 @@
             <a href="#">Stock / Productos</a>
         </nav>
         <div class="user-info">
-            Operador: <strong>Raul Moles</strong> 
+            Operador: <strong>{{ session['vendedor_nombre'] }}</strong>
             (<a href="/logout" style="color: #ff6b6b; font-size: 12px; text-decoration: none;">Salir</a>)
         </div>
     </header>
@@ -32,26 +32,26 @@
     <main class="dashboard-container">
         <div class="dashboard-header">
             <h2>Dashboard General</h2>
-
+            <h2>Bienvenido/a al panel, {{ session['vendedor_nombre'] }}</h2>
         </div>
 
         <!-- Cajas de métricas -->
         <section class="kpi-cards">
             <div class="card">
                 <h3>Recaudación Total</h3>
-                <p class="card-value">$ 1,250,000</p>
+                <p class="card-value">$ {{ "{:,.2f}".format(metrics.recaudacion_total) }}</p>
             </div>
             <div class="card">
-                <h3>Ganancias del Mes</h3>
-                <p class="card-value">$ 450,000</p>
+                <h3>Ventas del Mes</h3>
+                <p class="card-value">$ {{ "{:,.2f}".format(metrics.ganancias_mes) }}</p>
             </div>
             <div class="card">
                 <h3>A Cobrar (Clientes)</h3>
-                <p class="card-value">$ 320,000</p>
+                <p class="card-value">$ {{ "{:,.2f}".format(metrics.a_cobrar) }}</p>
             </div>
             <div class="card">
                 <h3>A Pagar (Proveedores)</h3>
-                <p class="card-value">$ 180,000</p>
+                <p class="card-value">$ {{ "{:,.2f}".format(metrics.a_pagar) }}</p>
             </div>
         </section>
 

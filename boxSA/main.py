@@ -10,7 +10,7 @@ app.secret_key = 'clave_secreta_boxsa_123'
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'Kiro2907',
+    'password': 'admin',
     'database': 'boxsa'
 }
 
@@ -27,7 +27,7 @@ def login():
     if request.method == 'POST':
         session['vendedor_id'] = int(request.form['vendedor_id'])
         session['vendedor_nombre'] = request.form['vendedor_nombre']
-        return redirect(url_for('listado_ov'))
+        return redirect(url_for('home'))
         
     conn = get_db_connection()
     if not conn:
@@ -57,7 +57,30 @@ def logout():
 def home():
     if 'vendedor_id' not in session:
         return redirect(url_for('login'))
-    return render_template('index.html')
+        
+    conn = get_db_connection()
+    # Valores por defecto en caso de que la vista falle
+    metrics = {'recaudacion_total': 0, 'ganancias_mes': 0, 'a_cobrar': 0, 'a_pagar': 180000} 
+    
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Consultamos la vista general directamente
+            cursor.execute("SELECT * FROM vw_dashboard_kpis")
+            row = cursor.fetchone()
+            if row:
+                metrics['recaudacion_total'] = row['recaudacion_total']
+                metrics['ganancias_mes'] = row['ganancias_mes']
+                metrics['a_cobrar'] = row['a_cobrar']
+                
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            if conn:
+                conn.close()
+            print(f"Error cargando dashboard: {e}")
+
+    return render_template('index.html', metrics=metrics)
 
 @app.route('/ov')
 def listado_ov():
