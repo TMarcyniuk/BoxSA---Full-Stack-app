@@ -49,13 +49,10 @@ python -m pip install Flask mysql-connector-python
 
 Asegurate de que MySQL Server esté iniciado y abrí una conexión local desde MySQL Workbench.
 
-1. Abrí el archivo `BoxSAFinal.sql` con **File > Open SQL Script**.
-2. Verificá que estés conectado al servidor local correcto.
-3. Ejecutá el script con el botón del rayo (**Execute**). El archivo crea y selecciona la base `boxsa`, y carga las tablas y los datos incluidos en el volcado.
+1. Abrí Mysql workbench
+2. Importá el archivo .sql
 
 **Importante:** el volcado contiene instrucciones que crean o reemplazan tablas. Si ya tenés una base `boxsa` con información que querés conservar, hacé una copia de seguridad antes de ejecutarlo.
-
-Si estás preparando la base con los datos de prueba corregidos para mostrar OVs en distintos estados, importá primero `BoxSAFinal.sql` y luego ejecutá `reparacion_boxsa_v2_con_estados.sql` sobre una copia de seguridad de esa base.
 
 ### 5. Configurar la conexión a MySQL
 
@@ -91,15 +88,6 @@ Abrí el navegador e ingresá a:
 http://127.0.0.1:5000
 
 Se mostrará la pantalla de inicio de sesión. En la versión actual, se selecciona un usuario disponible en el sistema para ingresar.
-
-## Comandos rápidos
-
-| Acción | Windows | macOS / Linux |
-|---|---|---|
-| Crear entorno virtual | `python -m venv venv` | `python3 -m venv venv` |
-| Activar entorno virtual | `venv\Scripts\Activate.ps1` | `source venv/bin/activate` |
-| Instalar dependencias | `python -m pip install Flask mysql-connector-python` | `python -m pip install Flask mysql-connector-python` |
-| Iniciar aplicación | `flask --app main run` |
 
 ## Solución de problemas
 
